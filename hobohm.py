@@ -50,32 +50,34 @@ def parse_commandline(parser):
 ################################################################################################
 
 def build_neighbordict(options):
+
+    # neighbordict should, for each item, contain a set of its neighbors (possibly empty)
     neighbordict = {}
 
-    # Could use operator module and assign < or > to variable to avoid repeated code
-    # but is less readable...
     if options.simfile:
-        with open(options.simfile, "r") as infile:
-            for line in infile:
-                name1,name2,similarity=line.split()
+        fname = options.simfile
+        similarity = True
+    else:
+        fname = options.distfile
+        similarity = False
+
+    with open(fname, "r") as infile:
+        for line in infile:
+            name1,name2,value = line.split()
+            if name1 != name2:
+                value = float(value)
                 if name1 not in neighbordict:
                     neighbordict[name1]=set()
                 if name2 not in neighbordict:
                     neighbordict[name2]=set()
-                if float(similarity) > options.cutoff and name1 != name2:
-                    neighbordict[name1].add(name2)
-                    neighbordict[name2].add(name1)
-    elif options.distfile:
-        with open(options.distfile, "r") as infile:
-            for line in infile:
-                name1,name2,distance=line.split()
-                if name1 not in neighbordict:
-                    neighbordict[name1]=set()
-                if name2 not in neighbordict:
-                    neighbordict[name2]=set()
-                if float(distance) < options.cutoff and name1 != name2:
-                    neighbordict[name1].add(name2)
-                    neighbordict[name2].add(name1)
+                if similarity:
+                    if value > options.cutoff:
+                        neighbordict[name1].add(name2)
+                        neighbordict[name2].add(name1)
+                else:
+                    if value < options.cutoff:
+                        neighbordict[name1].add(name2)
+                        neighbordict[name2].add(name1)
 
     return neighbordict
 
@@ -176,3 +178,5 @@ def print_keepnames(keepnames):
 
 if __name__ == "__main__":
     main()
+    # import cProfile
+    # cProfile.run('main()', 'tmp/profile.pstats')
