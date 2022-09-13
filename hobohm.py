@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys, os.path
 
 # Parse commandline, check that file name and cutoff is given and that file exists
