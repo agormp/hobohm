@@ -50,7 +50,7 @@ name1 name3 similarity
 ...
 ```
 
-(2) A cutoff value. Pairs of items that are more similar than this cutoff are taken to be redundant, and one of them will be removed in the final output.
+(2) A cutoff value. Pairs of items that are more similar than this cutoff are taken to be redundant, and at least one of them will be removed in the final output.
 
 #### Option -d: pairwise distances
 
@@ -62,11 +62,11 @@ name1 name3 distance
 ...
 ```
 
-(2) A cutoff value. Pairs of items that are less distant than this cutoff are taken to be redundant, and one of them will be removed in the final output.
+(2) A cutoff value. Pairs of items that are less distant than this cutoff are taken to be redundant, and at least one of them will be removed in the final output.
 
 ### Output:
 
-A list of names of items that should be kept in the non-redundant set, written to stdout. This set contains no pairs of items that are more similar (less distant) than the cutoff. The algorithm aims at making the set the maximal possible size. This can occassionally fail if there are multiple items with the same number of "neighbors".
+A list of names of items that should be kept in the non-redundant set, written to stdout. This set contains no pairs of items that are more similar (less distant) than the cutoff. The algorithm aims at making the set the maximal possible size. This can occassionally fail if there are multiple items with the same number of "neighbors" and the order of removal of items has an impact.
 
 ## Usage
 
@@ -80,4 +80,24 @@ Options:
   -d DISTFILE  file with pairwise distances: name1 name2 dist
   -c CUTOFF    cutoff for deciding which pairs are neighbors
   -k KEEPFILE  file with names that must be kept (one name per line)
+```
+
+## Usage examples
+
+### Select items such that max pairwise similarity is 0.65
+
+```
+hobohm -s pairsims.txt -c 0.65 > nonredundant.txt
+```
+
+### Select items such that minimum pairwise distance is 10
+
+```
+hobohm -d pairdist.txt -c 10 > nonredundant.txt
+```
+
+### Select items such that max pairwise similarity is 0.3, while keeping items in keeplist.txt
+
+```
+hobohm -s pairsims.txt -c 0.3 -k keeplist.txt> nonredundant.txt
 ```
