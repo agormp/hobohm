@@ -44,7 +44,7 @@ There are no dependencies (apart from the python standard library).
 
 #### Option -s: pairwise similarities
 
-(1) A text file containing pairwise *similarities*, one pair per line:
+(1) A text file containing pairwise *similarities*, one pair per line. All pairs of names must be listed.
 
 ```
 name1 name2 similarity
@@ -56,7 +56,7 @@ name1 name3 similarity
 
 #### Option -d: pairwise distances
 
-(1) A text file containing pairwise *distances*, one pair per line:
+(1) A text file containing pairwise *distances*, one pair per line. All pairs of names must be listed.
 
 ```
 name1 name2 distance
