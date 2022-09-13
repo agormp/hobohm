@@ -62,7 +62,7 @@ def build_neighbordict(options):
                     neighbordict[name1]=set()
                 if name2 not in neighbordict:
                     neighbordict[name2]=set()
-                if similarity > options.cutoff and name1 != name2:
+                if float(similarity) > options.cutoff and name1 != name2:
                     neighbordict[name1].add(name2)
                     neighbordict[name2].add(name1)
     elif options.distfile:
@@ -73,7 +73,7 @@ def build_neighbordict(options):
                     neighbordict[name1]=set()
                 if name2 not in neighbordict:
                     neighbordict[name2]=set()
-                if distance < options.cutoff and name1 != name2:
+                if float(distance) < options.cutoff and name1 != name2:
                     neighbordict[name1].add(name2)
                     neighbordict[name2].add(name1)
 
