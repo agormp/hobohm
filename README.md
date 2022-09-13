@@ -99,5 +99,5 @@ hobohm -d pairdist.txt -c 10 > nonredundant.txt
 ### Select items such that max pairwise similarity is 0.3, while keeping items in keeplist.txt
 
 ```
-hobohm -s pairsims.txt -c 0.3 -k keeplist.txt> nonredundant.txt
+hobohm -s pairsims.txt -c 0.3 -k keeplist.txt > nonredundant.txt
 ```
