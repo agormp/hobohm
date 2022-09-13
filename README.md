@@ -5,7 +5,11 @@
 
 (placeholder - not yet working as described)
 
-The "Hobohm" algorithm was originally created with the purpose of selecting representative, non-redundant sets of protein data from a larger data set. Non-redundant here means that the resulting data set should contain no pairs of sequences with high similarity: ["Selection of representative protein data sets"](https://pubmed.ncbi.nlm.nih.gov/1304348/). This command-line program implements algorithm 2 from that paper.
+The "Hobohm" algorithm was originally created with the purpose of selecting representative, non-redundant sets of protein data from a larger data set. Non-redundant here means that the resulting data set should contain no pairs of sequences with high similarity:
+
+["Selection of representative protein data sets", Protein Sci. 1992. 1(3):409-17](https://pubmed.ncbi.nlm.nih.gov/1304348/).
+
+This command-line program implements algorithm 2 from that paper.
 
 The `hobohm` program takes as input (1) a text-file containing a list of pairwise similarities and (2) a cutoff for deciding when two sequences are too similar.
 
