@@ -1,144 +1,178 @@
 #!/usr/bin/env python3
 import sys, os.path
+from optparse import OptionParser
 
-# Parse commandline, check that file name and cutoff is given and that file exists
-# Note: should add support for stdin!!!
-if not sys.argv[2:]:
-    print("usage: %s CUT-OFF NEIGHBOR-LIST [INCLUDE-LIST]\n" % sys.argv[0])
-    print("Hobohm2 algorithm for optimal homology-reduction\n")
-    print("Input: a list of sequence similarities and a cutoff value.")
-    print("       Sequences that are more similar than the cutoff, are")
-    print("       considered to be neighbors.\n")
-    print("       It is possible to also provide a list of genes")
-    print("       that have to be included in the list\n")
-    print("Output: a list of sequences that should be kept in the")
-    print("       homology-reduced data set\n")
-    print("Format of NEIGHBOR-LIST:")
-    print("       seqid1 seqid2 similarity")
-    print("       seqid1 seqid2 similarity")
-    print("       ...\n")
-    print("Format of KEEP-LIST:")
-    print("       seqid")
-    print("       seqid")
-    print("       ...\n")
-    sys.exit()
+################################################################################################
 
-cutoff = float(sys.argv[1])
+def main():
+    parser = build_parser()
+    options = parse_commandline(parser)
+    neighbordict = build_neighbordict(options)
+    if options.keepfile:
+        neighbordict = handle_keeplist(options, neighbordict)
+    neighbor_count_dict = remove_neighbors(neighbordict)
+    keepnames = reinstate_neighborless_skipped(neighbordict, neighbor_count_dict)
+    print_keepnames(keepnames)
 
-if not os.path.isfile(sys.argv[2]):
-    print("%s: file %s does not exist\n" % (sys.argv[0], sys.argv[2]))
-    sys.exit()
+################################################################################################
 
-#######################################################################################
-# Open neighbor-file, iterate over it one line at a time
-# Read list of similarities, build list of names and keep track of neighbors.
-# Neighbor info kept in dictionary, where key is seqname and value is Set of neighbors.
-neighborfile = open(sys.argv[2], "r")
-neighborlist = {}
+def build_parser():
+    parser = OptionParser(usage="usage: hobohm [-s|-d] FILE -c CUTOFF [-k KEEPFILE]",
+                          version="0.0.1")
 
-# Each line in file has format: seqid1 seqid2 similarity
-for simline in neighborfile:
+    parser.add_option("-s", type="string", dest="simfile", metavar="SIMFILE",
+                          help="file with pairwise similarities: name1 name2 sim")
 
-    words=simline.split()
-    if len(words)==3:                # Sanity check: do lines conform to expected format?
-        seq1=words[0]
-        seq2=words[1]
-        similarity=float(words[2])
+    parser.add_option("-d", type="string", dest="distfile", metavar="DISTFILE",
+                          help="file with pairwise distances: name1 name2 dist")
 
-    # Add sequence names as we go along
-    if seq1 not in neighborlist:
-        neighborlist[seq1]=set()
-    if seq2 not in neighborlist:
-        neighborlist[seq2]=set()
+    parser.add_option("-c", type="float", dest="cutoff", metavar="CUTOFF",
+                          help="cutoff for deciding which pairs are neighbors")
 
-    # Build lists of neighbors as we go along.
-    # Note: Set.add() method automatically enforces member uniqueness - saves expensive test!
-    if similarity > cutoff and seq1 != seq2:
-        neighborlist[seq1].add(seq2)
-        neighborlist[seq2].add(seq1)
+    parser.add_option("-k", type="string", dest="keepfile", metavar="KEEPFILE",
+                          help="file with names that must be kept (one name per line)")
 
-neighborfile.close()
+    parser.set_defaults(simfile=None, distfile=None, cutoff=None, keepfile=None)
+    return parser
 
-# Read includelist if provided
-includes = False
-if sys.argv[3:]:
-    includes = True
-    includelist = set()
-    includefile = open(sys.argv[3], "r")
-    for line in includefile:
+################################################################################################
+
+def parse_commandline(parser):
+
+    (options, args) = parser.parse_args()
+    if ((options.simfile and options.distfile) or
+       ((options.simfile is None) and (options.distfile is None))):
+        parser.error("Use either option -s (similarity) or option -d (distance)")
+    if options.cutoff is None:
+        parser.error("Must provide cutoff (option -c)")
+    return(options)
+
+################################################################################################
+
+def build_neighbordict(options):
+    neighbordict = {}
+
+    # Could use operator module and assign < or > to variable to avoid repeated code
+    # but is less readable...
+    if options.simfile:
+        with open(options.simfile, "r") as infile:
+            for line in infile:
+                name1,name2,similarity=line.split()
+                if name1 not in neighbordict:
+                    neighbordict[name1]=set()
+                if name2 not in neighbordict:
+                    neighbordict[name2]=set()
+                if similarity > options.cutoff and name1 != name2:
+                    neighbordict[name1].add(name2)
+                    neighbordict[name2].add(name1)
+    elif options.distfile:
+        with open(options.distfile, "r") as infile:
+            for line in infile:
+                name1,name2,distance=line.split()
+                if name1 not in neighbordict:
+                    neighbordict[name1]=set()
+                if name2 not in neighbordict:
+                    neighbordict[name2]=set()
+                if distance < options.cutoff and name1 != name2:
+                    neighbordict[name1].add(name2)
+                    neighbordict[name2].add(name1)
+
+    return neighbordict
+
+################################################################################################
+
+def handle_keeplist(options, neighbordict):
+
+    # Read list of names to keep
+    keepset = set()
+    with open(options.keepfile, "r") as infile:
+        for line in infile:
             words = line.split()
-            includelist.add(words[0])
-    includefile.close()
+            keepset.add(words[0])
 
-########################################################################################
+    # First, check if any pair of keepset members are neighbors.
+    # If so, print warning and artificially hide this fact
+    for keepname1 in keepset:
+        for keepname2 in (keepset - set([keepname1])):
+            if keepname2 in neighbordict[keepname1]:
+                print("# Keeplist warning: {} and {} are neighbors!".format(keepname1, keepname2))
+                neighbordict[keepname1].remove(keepname2)
+                neighbordict[keepname2].remove(keepname1)
 
-# If includelist was provided: preprocess list
-if includes:
+    # Then, remove all neighbors of keepset members
+    for keepname in keepset:
+        keepname_neighbors = list(neighbordict[keepname]) # To avoid issues with changing set during iteration
 
-    # (1) Check if any pair of includelist members are neighbors.
-    #     If so, print warning and artificially hide this fact
-    for incseq1 in includelist:
-        for incseq2 in (includelist - set([incseq1])):
-            if incseq2 in neighborlist[incseq1]:
-                print("# Includelist warning: %s and %s are neighbors!" % (incseq1, incseq2))
-                neighborlist[incseq1].remove(incseq2)
-                neighborlist[incseq2].remove(incseq1)
-
-    # (2) Remove all neighbors of includelist members
-    for incseq in includelist:
-        incseq_neighbors = list(neighborlist[incseq]) # To avoid issues with changing set during iteration
-
-        for remseq in incseq_neighbors:
-
+        for remseq in keepname_neighbors:
             # Remove any mention of remseq in other entries
-            remseq_neighbors = list(neighborlist[remseq])
+            remseq_neighbors = list(neighbordict[remseq])
             for remseq_neighbor in remseq_neighbors:
-                neighborlist[remseq_neighbor].remove(remseq)
+                neighbordict[remseq_neighbor].remove(remseq)
 
             # Now remove remseq entry itself
-            del neighborlist[remseq]
+            del neighbordict[remseq]
 
-########################################################################################
+    return(neighbordict)
 
-# Build dictionary keeping track of how many neighbors each sequence has
-nr_dict = {}
-for seq in list(neighborlist.keys()):
-    nr_dict[seq]=len(neighborlist[seq])
+################################################################################################
 
-# Find max number of neighbors
-maxneighb = max(nr_dict.values())
+def remove_neighbors(neighbordict):
 
-# While some sequences in list still have neighbors: remove the one with most neighbors, update counts
-# Note: could ties be dealt with intelligently?
-while maxneighb > 0:
+    # Build dictionary keeping track of how many neighbors each item has
+    neighbor_count_dict = {}
+    for name in neighbordict:
+        neighbor_count_dict[name]=len(neighbordict[name])
 
-    # Find an entry that has maxneighb neighbors, and remove it from list
-    for remove_seq in list(nr_dict.keys()):
-        if nr_dict[remove_seq] == maxneighb: break
-    del(nr_dict[remove_seq])
+    # Find max number of neighbors
+    maxneighb = max(neighbor_count_dict.values())
 
-    # Update neighbor counts
-    for neighbor in neighborlist[remove_seq]:
-        if neighbor in nr_dict:
-            nr_dict[neighbor] -= 1
+    # While some items still have neighbors: remove item with most neighbors, update counts
+    # Note: could ties be dealt with intelligently?
+    while maxneighb > 0:
 
-    # Find new maximum number of neighbors
-    maxneighb = max(nr_dict.values())
+        # Find an item that has maxneighb neighbors, and remove it from list
+        for remove_name, count in neighbor_count_dict.items():
+            if count == maxneighb:
+                break
+        del(neighbor_count_dict[remove_name])
 
-##############################################################################################
-# Postprocess: reinstate skipped sequences that now have no neighbors
-# Note: order may have effect. Could this be optimized?
+        # Update neighbor counts
+        for neighbor in neighbordict[remove_name]:
+            if neighbor in neighbor_count_dict:
+                neighbor_count_dict[neighbor] -= 1
 
-allseqs=set(neighborlist.keys())
-keepseqs=set(nr_dict.keys())
-skipseqs=allseqs - keepseqs
+        # Find new maximum number of neighbors
+        maxneighb = max(neighbor_count_dict.values())
 
-for skipped in skipseqs:
-    # if skipped sequence has no neighbors in keeplist
-    if not (neighborlist[skipped] & keepseqs):
-        keepseqs.add(skipped)
+    return neighbor_count_dict
 
-# Print remaining sequences
-for seq in keepseqs:
-    print(seq)
+################################################################################################
 
+def reinstate_neighborless_skipped(neighbordict, neighbor_count_dict):
+
+    # Postprocess: reinstate skipped sequences that now have no neighbors
+    # (This can happpen when ...?)
+    # Note: order may have effect. Could this be optimized?
+
+    allseqs=set(neighbordict.keys())
+    keepseqs=set(neighbor_count_dict.keys())
+    skipseqs=allseqs - keepseqs
+
+    for skipped in skipseqs:
+        # if skipped sequence has no neighbors in keeplist
+        if not (neighbordict[skipped] & keepseqs):
+            keepseqs.add(skipped)
+
+    return keepseqs
+
+################################################################################################
+
+def print_keepnames(keepnames):
+    # Print retained items
+    for name in keepnames:
+        print(name)
+
+################################################################################################
+
+if __name__ == "__main__":
+    main()
