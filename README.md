@@ -1,9 +1,7 @@
 # hobohm: command line program for selecting representative, non-redundant data set from larger set, based on list of pairwise similarities (or distances).
 
 [![PyPI downloads](https://static.pepy.tech/personalized-badge/hobohm?period=total&units=none&left_color=black&right_color=blue&left_text=downloads&service=github)](https://pepy.tech/project/hobohm)
-![](https://img.shields.io/badge/version-0.0.1-blue)
-
-(placeholder - not yet working as described)
+![](https://img.shields.io/badge/version-1.0.0-blue)
 
 The "Hobohm" algorithm was originally created with the purpose of selecting representative, non-redundant sets of protein data from a larger data set. Non-redundant here means that the resulting data set should contain no pairs of sequences with high similarity:
 
@@ -72,4 +70,14 @@ A list of names of items that should be kept in the non-redundant set, written t
 
 ## Usage
 
-To do
+```
+Usage: hobohm [-s|-d] FILE -c CUTOFF [-k KEEPFILE]
+
+Options:
+  --version    show program's version number and exit
+  -h, --help   show this help message and exit
+  -s SIMFILE   file with pairwise similarities: name1 name2 sim
+  -d DISTFILE  file with pairwise distances: name1 name2 dist
+  -c CUTOFF    cutoff for deciding which pairs are neighbors
+  -k KEEPFILE  file with names that must be kept (one name per line)
+```
