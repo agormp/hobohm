@@ -28,6 +28,12 @@ The `hobohm` source code is available on GitHub: https://github.com/agormp/hoboh
 python3 -m pip install hobohm
 ```
 
+Upgrading to latest version:
+
+```
+python3 -m pip install --upgrade hobohm
+```
+
 ## Dependencies
 
 There are no dependencies (apart from the python standard library).
