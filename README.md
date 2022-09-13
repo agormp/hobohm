@@ -1,4 +1,4 @@
-# hobohm: command line program for selecting representative, non-redundant data set from list of pairwise similarities (or distances)
+# hobohm: command line program for selecting representative, non-redundant data set from larger set, based on list of pairwise similarities (or distances).
 
 [![PyPI downloads](https://static.pepy.tech/personalized-badge/hobohm?period=total&units=none&left_color=black&right_color=blue&left_text=downloads&service=github)](https://pepy.tech/project/hobohm)
 ![](https://img.shields.io/badge/version-0.0.1-blue)
