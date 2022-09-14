@@ -1,10 +1,7 @@
 # hobohm: command line program for selecting representative, non-redundant data set from larger set, based on list of pairwise similarities (or distances).
 
-[![PyPI downloads](https://static.pepy.tech/personalized-badge/hobohm?period=total&units=international_system&left_color=black&right_color=blue&left_text=downloads)](https://pepy.tech/project/hobohm)
+[![PyPI downloads](https://static.pepy.tech/personalized-badge/hobohm?period=total&units=international_system&left_color=grey&right_color=blue&left_text=downloads)](https://pepy.tech/project/hobohm)
 ![](https://img.shields.io/badge/version-1.0.1-blue)
-
-
-[![Downloads](https://pepy.tech/badge/hobohm)](https://pepy.tech/project/hobohm)
 
 The "Hobohm" algorithm was originally created with the purpose of selecting representative, non-redundant sets of protein data from a larger dataset. Non-redundant (or homology-reduced) here means that the resulting data set should contain no pairs of sequences with high similarity ("neighbors"):
 
