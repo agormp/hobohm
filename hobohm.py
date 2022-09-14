@@ -25,12 +25,12 @@ def build_parser():
                              "(option -d) for each pair of items: name1 name2 value")
 
     distsimgroup = parser.add_mutually_exclusive_group()
-    distsimgroup.add_argument('-s', action='store_true', dest="similarity",
+    distsimgroup.add_argument('-s', action='store_true', dest="values_are_sim",
                               help="values in PAIRFILE are similarities " +
-                                    "(higher values = more similar)")
-    distsimgroup.add_argument('-d', action='store_true', dest="distance",
+                                    "(larger values = more similar)")
+    distsimgroup.add_argument('-d', action='store_true', dest="values_are_dist",
                               help="values in PAIRFILE are distances " +
-                                    "(lower values = more similar)")
+                                    "(smaller values = more similar)")
 
     parser.add_argument("-c",  action="store", type=float, dest="cutoff", metavar="CUTOFF",
                           help="cutoff for deciding which pairs are neighbors")
@@ -45,8 +45,8 @@ def build_parser():
 def parse_commandline(parser):
 
     args = parser.parse_args()
-    if ((args.similarity and args.distance) or
-       ((args.similarity is None) and (args.distance is None))):
+    if ((args.values_are_sim and args.values_are_dist) or
+       ((args.values_are_sim is None) and (args.values_are_dist is None))):
         parser.error("Use either option -s (similarity) or option -d (distance)")
     if args.cutoff is None:
         parser.error("Must provide cutoff (option -c)")
@@ -59,10 +59,8 @@ def build_neighbordict(args):
     # neighbordict should, for each item, contain a set of its neighbors (possibly empty)
     neighbordict = {}
 
-    if args.similarity:
-        similarity = True
-    else:
-        similarity = False
+    cutoff = args.cutoff    # Micro optimization: save time looking up dotted attributes
+    values_are_sims = args.values_are_sim
 
     with open(args.pairfile, "r") as infile:
         for line in infile:
@@ -73,16 +71,24 @@ def build_neighbordict(args):
                     neighbordict[name1]=set()
                 if name2 not in neighbordict:
                     neighbordict[name2]=set()
-                if similarity:
-                    if value > args.cutoff:
-                        neighbordict[name1].add(name2)
-                        neighbordict[name2].add(name1)
-                else:
-                    if value < args.cutoff:
-                        neighbordict[name1].add(name2)
-                        neighbordict[name2].add(name1)
+                if items_are_neighbors(value, cutoff, values_are_sims):
+                    neighbordict[name1].add(name2)
 
     return neighbordict
+
+################################################################################################
+
+def items_are_neighbors(value, cutoff, values_are_sims):
+    if values_are_sims:
+        if value > cutoff:
+            return True
+        else:
+            return False
+    else:
+        if value < cutoff:
+            return True
+        else:
+            return False
 
 ################################################################################################
 
