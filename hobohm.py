@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-import sys, os.path
-from optparse import OptionParser
+import argparse
 
 ################################################################################################
 
 def main():
     parser = build_parser()
-    options = parse_commandline(parser)
-    neighbordict = build_neighbordict(options)
-    if options.keepfile:
-        neighbordict = handle_keeplist(options, neighbordict)
+    args = parse_commandline(parser)
+    neighbordict = build_neighbordict(args)
+    if args.keepfile:
+        neighbordict = handle_keeplist(args, neighbordict)
     neighbor_count_dict = remove_neighbors(neighbordict)
     keepnames = reinstate_neighborless_skipped(neighbordict, neighbor_count_dict)
     print_keepnames(keepnames)
@@ -17,51 +16,55 @@ def main():
 ################################################################################################
 
 def build_parser():
-    parser = OptionParser(usage="usage: hobohm [-s|-d] FILE -c CUTOFF [-k KEEPFILE]",
-                          version="0.0.1")
+    parser = argparse.ArgumentParser(description = "Selects representative, non-redundant " +
+                                    "data set from larger set, based on list of pairwise " +
+                                    "similarities (or distances).")
 
-    parser.add_option("-s", type="string", dest="simfile", metavar="SIMFILE",
-                          help="file with pairwise similarities: name1 name2 sim")
+    parser.add_argument("pairfile", metavar='PAIRFILE', default="-",
+                        help="file containing the similarity (option -s) or distance " +
+                             "(option -d) for each pair of items: name1 name2 value")
 
-    parser.add_option("-d", type="string", dest="distfile", metavar="DISTFILE",
-                          help="file with pairwise distances: name1 name2 dist")
+    distsimgroup = parser.add_mutually_exclusive_group()
+    distsimgroup.add_argument('-s', action='store_true', dest="similarity",
+                              help="values in PAIRFILE are similarities " +
+                                    "(higher values = more similar)")
+    distsimgroup.add_argument('-d', action='store_true', dest="distance",
+                              help="values in PAIRFILE are distances " +
+                                    "(lower values = more similar)")
 
-    parser.add_option("-c", type="float", dest="cutoff", metavar="CUTOFF",
+    parser.add_argument("-c",  action="store", type=float, dest="cutoff", metavar="CUTOFF",
                           help="cutoff for deciding which pairs are neighbors")
 
-    parser.add_option("-k", type="string", dest="keepfile", metavar="KEEPFILE",
-                          help="file with names that must be kept (one name per line)")
+    parser.add_argument("-k", action="store", dest="keepfile", metavar="KEEPFILE",
+                          help="file with names of items that must be kept (one name per line)")
 
-    parser.set_defaults(simfile=None, distfile=None, cutoff=None, keepfile=None)
     return parser
 
 ################################################################################################
 
 def parse_commandline(parser):
 
-    (options, args) = parser.parse_args()
-    if ((options.simfile and options.distfile) or
-       ((options.simfile is None) and (options.distfile is None))):
+    args = parser.parse_args()
+    if ((args.similarity and args.distance) or
+       ((args.similarity is None) and (args.distance is None))):
         parser.error("Use either option -s (similarity) or option -d (distance)")
-    if options.cutoff is None:
+    if args.cutoff is None:
         parser.error("Must provide cutoff (option -c)")
-    return(options)
+    return(args)
 
 ################################################################################################
 
-def build_neighbordict(options):
+def build_neighbordict(args):
 
     # neighbordict should, for each item, contain a set of its neighbors (possibly empty)
     neighbordict = {}
 
-    if options.simfile:
-        fname = options.simfile
+    if args.similarity:
         similarity = True
     else:
-        fname = options.distfile
         similarity = False
 
-    with open(fname, "r") as infile:
+    with open(args.pairfile, "r") as infile:
         for line in infile:
             name1,name2,value = line.split()
             if name1 != name2:
@@ -71,11 +74,11 @@ def build_neighbordict(options):
                 if name2 not in neighbordict:
                     neighbordict[name2]=set()
                 if similarity:
-                    if value > options.cutoff:
+                    if value > args.cutoff:
                         neighbordict[name1].add(name2)
                         neighbordict[name2].add(name1)
                 else:
-                    if value < options.cutoff:
+                    if value < args.cutoff:
                         neighbordict[name1].add(name2)
                         neighbordict[name2].add(name1)
 
@@ -83,11 +86,11 @@ def build_neighbordict(options):
 
 ################################################################################################
 
-def handle_keeplist(options, neighbordict):
+def handle_keeplist(args, neighbordict):
 
     # Read list of names to keep
     keepset = set()
-    with open(options.keepfile, "r") as infile:
+    with open(args.keepfile, "r") as infile:
         for line in infile:
             words = line.split()
             keepset.add(words[0])
