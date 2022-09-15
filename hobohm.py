@@ -75,18 +75,10 @@ def build_neighbordict(args):
                 if name2 not in neighbordict:
                     neighbordict[name2]=set()
 
-                if values_are_sim:
-                    if value > cutoff:
-                        items_are_neighbors = True
-                    else:
-                        items_are_neighbors = False
-                else:
-                    if value < cutoff:
-                        items_are_neighbors = True
-                    else:
-                        items_are_neighbors = False
-
-                if items_are_neighbors:
+                if values_are_sim and  value > cutoff:
+                    neighbordict[name1].add(name2)
+                    neighbordict[name2].add(name1)
+                elif not values_are_sim and value < cutoff:
                     neighbordict[name1].add(name2)
                     neighbordict[name2].add(name1)
 
