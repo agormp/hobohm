@@ -54,43 +54,43 @@ def parse_commandline(parser):
 
 ################################################################################################
 
-# test branch in git
-
 def build_neighbordict(args):
 
     # neighbordict should, for each item, contain a set of its neighbors (possibly empty)
     neighbordict = {}
 
     cutoff = args.cutoff    # Micro optimization: save time looking up dotted attributes
-    values_are_sims = args.values_are_sim
+    values_are_sim = args.values_are_sim
 
     with open(args.pairfile, "r") as infile:
+
         for line in infile:
             name1,name2,value = line.split()
+
             if name1 != name2:
                 value = float(value)
+
                 if name1 not in neighbordict:
                     neighbordict[name1]=set()
                 if name2 not in neighbordict:
                     neighbordict[name2]=set()
-                if items_are_neighbors(value, cutoff, values_are_sims):
+
+                if values_are_sim:
+                    if value > cutoff:
+                        items_are_neighbors = True
+                    else:
+                        items_are_neighbors = False
+                else:
+                    if value < cutoff:
+                        items_are_neighbors = True
+                    else:
+                        items_are_neighbors = False
+
+                if items_are_neighbors:
                     neighbordict[name1].add(name2)
+                    neighbordict[name2].add(name1)
 
     return neighbordict
-
-################################################################################################
-
-def items_are_neighbors(value, cutoff, values_are_sims):
-    if values_are_sims:
-        if value > cutoff:
-            return True
-        else:
-            return False
-    else:
-        if value < cutoff:
-            return True
-        else:
-            return False
 
 ################################################################################################
 
@@ -139,7 +139,7 @@ def remove_neighbors(neighbordict):
     # Find max number of neighbors
     maxneighb = max(neighbor_count_dict.values())
 
-    # While some items still have neighbors: remove item with most neighbors, update counts
+    # While some items still have neighbors: remove an item with most neighbors, update counts
     # Note: could ties be dealt with intelligently?
     while maxneighb > 0:
 
