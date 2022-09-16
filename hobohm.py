@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse
+import argparse, sys
 
 ################################################################################################
 
@@ -98,11 +98,11 @@ def handle_keeplist(args, neighbordict):
             keepset.add(words[0])
 
     # First, check if any pair of keepset members are neighbors.
-    # If so, print warning and artificially hide this fact
+    # If so, print warning on stderr and artificially hide this fact
     for keepname1 in keepset:
         for keepname2 in (keepset - set([keepname1])):
             if keepname2 in neighbordict[keepname1]:
-                print("# Keeplist warning: {} and {} are neighbors!".format(keepname1, keepname2))
+                sys.stderr.write("# Keeplist warning: {} and {} are neighbors!".format(keepname1, keepname2))
                 neighbordict[keepname1].remove(keepname2)
                 neighbordict[keepname2].remove(keepname1)
 
