@@ -47,12 +47,14 @@ def parse_commandline(parser):
     args = parser.parse_args()
     if ((args.values_are_sim and args.values_are_dist) or
        ((args.values_are_sim is None) and (args.values_are_dist is None))):
-        parser.error("Use either option -s (similarity) or option -d (distance)")
+        parser.error("Must specify either option -s (similarity) or option -d (distance)")
     if args.cutoff is None:
         parser.error("Must provide cutoff (option -c)")
     return(args)
 
 ################################################################################################
+
+# devel version
 
 def build_neighbordict(args):
 
