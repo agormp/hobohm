@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse, sys
+from collections import defaultdict
 
 ################################################################################################
 
@@ -59,7 +60,7 @@ def parse_commandline(parser):
 def build_neighbordict(args):
 
     # neighbordict should, for each item, contain a set of its neighbors (possibly empty)
-    neighbordict = {}
+    neighbordict = defaultdict(set)
 
     cutoff = args.cutoff    # Micro optimization: save time looking up dotted attributes
     values_are_sim = args.values_are_sim
@@ -71,11 +72,6 @@ def build_neighbordict(args):
 
             if name1 != name2:
                 value = float(value)
-
-                if name1 not in neighbordict:
-                    neighbordict[name1]=set()
-                if name2 not in neighbordict:
-                    neighbordict[name2]=set()
 
                 if values_are_sim and  value > cutoff:
                     neighbordict[name1].add(name2)
