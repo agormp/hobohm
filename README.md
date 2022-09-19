@@ -69,12 +69,12 @@ name1 name3 distance
 
 ### Output:
 
-A list of names of items that should be kept in the non-redundant set, written to stdout. This set contains no pairs of items that are more similar (less distant) than the cutoff. The algorithm aims at making the set the maximal possible size. This can occassionally fail if there are multiple items with the same number of "neighbors" and the order of removal of items has an impact.
+A list of names of items that should be kept in the representative subset, written to stdout. This set contains no pairs of items that are more similar (less distant) than the cutoff. The algorithm aims at making the set the maximal possible size. This can occassionally fail if there are multiple items with the same number of "neighbors" and the order of removal of items has an impact.
 
 ## Usage
 
 ```
-usage: hobohm.py [-h] [-s | -d] [-c CUTOFF] [-k KEEPFILE] PAIRFILE
+usage: hobohm [-h] [-s | -d] [-c CUTOFF] [-k KEEPFILE] PAIRFILE
 
 Selects representative subset of data based on list of pairwise similarities (or
 distances), such that no retained items are close neighbors
