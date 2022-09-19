@@ -1,19 +1,22 @@
-# hobohm: command line program for selecting representative, non-redundant data set from larger set, based on list of pairwise similarities (or distances).
+# hobohm: command line program for selecting representative subset of data, based on list of pairwise similarities (or distances) between items.
 
 [![PyPI downloads](https://static.pepy.tech/personalized-badge/hobohm?period=total&units=international_system&left_color=grey&right_color=blue&left_text=downloads)](https://pepy.tech/project/hobohm)
-![](https://img.shields.io/badge/version-1.0.1-blue)
+![](https://img.shields.io/badge/version-1.0.2-blue)
 
-The "Hobohm" algorithm was originally created with the purpose of selecting representative, non-redundant sets of protein data from a larger dataset. Non-redundant (or homology-reduced) here means that the resulting data set should contain no pairs of sequences with high similarity ("neighbors"):
+The `hobohm` program aims to select a representative subset from a collection of items for which the pairwise similarities are known.
+
+The program takes as input (1) a text-file containing a list of pairwise similarities between items in a data set, and (2) a cutoff for deciding when two items are too similar (i.e., when they are "neighbors").
+
+The output (written to stdout) is a list of names that should be kept in the subset. No retained items are neighbors, and the algorithm aims to pick the maximally sized such set, given the cutoff.
+
+It is also possible to use a list of pairwise *distances* instead of similarities. The cutoff is then interpreted as the *minimum distance* required in the selected subset.
+
+The "Hobohm" algorithm was originally created with the purpose of selecting homology-reduced sets of protein data from larger datasets. "Homology-reduced" here means that the resulting data set should contain no pairs of sequences with high sequence identity:
 
 ["Selection of representative protein data sets", Protein Sci. 1992. 1(3):409-17](https://pubmed.ncbi.nlm.nih.gov/1304348/).
 
-This command-line program implements algorithm 2 from that paper.
+This command-line program implements algorithm 2 from that paper, and can be applied to any type of data for which pairwise similarities (or distances) can be defined.
 
-The `hobohm` program takes as input (1) a text-file containing a list of pairwise similarities and (2) a cutoff for deciding when two sequences are too similar.
-
-The output (written to stdout) is a list of names that should be kept in the homology-reduced set. The algorithm aims to pick the maximally sized such set, given the cutoff.
-
-It is also possible to use a list of pairwise *distances* instead of similarities. The cutoff is then interpreted as the minimum distance required in the output data set.
 
 
 ## Availability
@@ -42,7 +45,7 @@ There are no dependencies (apart from the python standard library).
 
 #### Option -s: pairwise similarities
 
-(1) A text file containing pairwise *similarities*, one pair per line. All pairs of names must be listed.
+(1) A text file containing pairwise *similarities*, one pair per line. All pairs of names must be listed. The similarity matrix is assumed to be symmetric, and it is only necessary to list one direction for each pair of names.
 
 ```
 name1 name2 similarity
@@ -50,11 +53,11 @@ name1 name3 similarity
 ...
 ```
 
-(2) A cutoff value. Pairs of items that are more similar than this cutoff are taken to be redundant, and at least one of them will be removed in the final output.
+(2) A cutoff value. Pairs of items that are *more similar* than this cutoff are taken to be redundant, and at least one of them will be removed in the final output.
 
 #### Option -d: pairwise distances
 
-(1) A text file containing pairwise *distances*, one pair per line. All pairs of names must be listed.
+(1) A text file containing pairwise *distances*, one pair per line. All pairs of names must be listed. The distance matrix is assumed to be symmetric, and it is only necessary to list one direction for each pair of names.
 
 ```
 name1 name2 distance
@@ -62,7 +65,7 @@ name1 name3 distance
 ...
 ```
 
-(2) A cutoff value. Pairs of items that are less distant than this cutoff are taken to be redundant, and at least one of them will be removed in the final output.
+(2) A cutoff value. Pairs of items that are *less distant* than this cutoff are taken to be redundant, and at least one of them will be removed in the final output.
 
 ### Output:
 
@@ -71,33 +74,39 @@ A list of names of items that should be kept in the non-redundant set, written t
 ## Usage
 
 ```
-Usage: hobohm [-s|-d] FILE -c CUTOFF [-k KEEPFILE]
+usage: hobohm.py [-h] [-s | -d] [-c CUTOFF] [-k KEEPFILE] PAIRFILE
 
-Options:
-  --version    show program's version number and exit
+Selects representative subset of data based on list of pairwise similarities (or
+distances), such that no retained items are close neighbors
+
+positional arguments:
+  PAIRFILE     file containing the similarity (option -s) or distance (option -d) for each
+               pair of items: name1 name2 value
+
+optional arguments:
   -h, --help   show this help message and exit
-  -s SIMFILE   file with pairwise similarities: name1 name2 sim
-  -d DISTFILE  file with pairwise distances: name1 name2 dist
+  -s           values in PAIRFILE are similarities (larger values = more similar)
+  -d           values in PAIRFILE are distances (smaller values = more similar)
   -c CUTOFF    cutoff for deciding which pairs are neighbors
-  -k KEEPFILE  file with names that must be kept (one name per line)
-```
+  -k KEEPFILE  file with names of items that must be kept (one name per line)
+  ```
 
 ## Usage examples
 
 ### Select items such that max pairwise similarity is 0.65
 
 ```
-hobohm -s pairsims.txt -c 0.65 > nonredundant.txt
+hobohm -s -c 0.65 pairsims.txt > nonredundant.txt
 ```
 
 ### Select items such that minimum pairwise distance is 10
 
 ```
-hobohm -d pairdist.txt -c 10 > nonredundant.txt
+hobohm -d -c 10 pairdist.txt > nonredundant.txt
 ```
 
 ### Select items such that max pairwise similarity is 0.3, while keeping items in keeplist.txt
 
 ```
-hobohm -s pairsims.txt -c 0.3 -k keeplist.txt > nonredundant.txt
+hobohm -s -c 0.3 -k keeplist.txt pairsims.txt > nonredundant.txt
 ```
