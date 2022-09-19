@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse, sys
 from collections import defaultdict
+from operator import itemgetter
 
 ################################################################################################
 
@@ -47,7 +48,7 @@ def parse_commandline(parser):
 
     args = parser.parse_args()
     if ((args.values_are_sim and args.values_are_dist) or
-       ((args.values_are_sim is None) and (args.values_are_dist is None))):
+       ((not args.values_are_sim ) and (not args.values_are_dist))):
         parser.error("Must specify either option -s (similarity) or option -d (distance)")
     if args.cutoff is None:
         parser.error("Must provide cutoff (option -c)")
@@ -126,26 +127,22 @@ def remove_neighbors(neighbordict):
     for name in neighbordict:
         neighbor_count_dict[name]=len(neighbordict[name])
 
-    # Find max number of neighbors
-    maxneighb = max(neighbor_count_dict.values())
+    # Find max number of neighbors and corresponding name
+    item_with_most_nb, max_num_nb = max(neighbor_count_dict.items(), key=itemgetter(1))
 
     # While some items still have neighbors: remove an item with most neighbors, update counts
     # Note: could ties be dealt with intelligently?
-    while maxneighb > 0:
+    while max_num_nb > 0:
 
-        # Find an item that has maxneighb neighbors, and remove it from list
-        for remove_name, count in neighbor_count_dict.items():
-            if count == maxneighb:
-                break
-        del(neighbor_count_dict[remove_name])
+        del(neighbor_count_dict[item_with_most_nb])
 
         # Update neighbor counts
-        for neighbor in neighbordict[remove_name]:
-            if neighbor in neighbor_count_dict:
-                neighbor_count_dict[neighbor] -= 1
+        for item in neighbordict[item_with_most_nb]:
+            if item in neighbor_count_dict:
+                neighbor_count_dict[item] -= 1
 
         # Find new maximum number of neighbors
-        maxneighb = max(neighbor_count_dict.values())
+        item_with_most_nb, max_num_nb = max(neighbor_count_dict.items(), key=itemgetter(1))
 
     return neighbor_count_dict
 
