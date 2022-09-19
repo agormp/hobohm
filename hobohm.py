@@ -18,9 +18,9 @@ def main():
 ################################################################################################
 
 def build_parser():
-    parser = argparse.ArgumentParser(description = "Selects representative, non-redundant " +
-                                    "data set from larger set, based on list of pairwise " +
-                                    "similarities (or distances).")
+    parser = argparse.ArgumentParser(description = "Selects representative subset of data based on" +
+                                    " list of pairwise similarities (or distances), such that no" +
+                                    " retained items are close neighbors")
 
     parser.add_argument("pairfile", metavar='PAIRFILE', default="-",
                         help="file containing the similarity (option -s) or distance " +
