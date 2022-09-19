@@ -56,8 +56,6 @@ def parse_commandline(parser):
 
 ################################################################################################
 
-# devel version
-
 def build_neighbordict(args):
 
     # neighbordict should, for each item, contain a set of its neighbors (possibly empty)
@@ -74,12 +72,14 @@ def build_neighbordict(args):
             if name1 != name2:
                 value = float(value)
 
-                if values_are_sim and  value > cutoff:
-                    neighbordict[name1].add(name2)
-                    neighbordict[name2].add(name1)
-                elif not values_are_sim and value < cutoff:
-                    neighbordict[name1].add(name2)
-                    neighbordict[name2].add(name1)
+                if values_are_sim:
+                    if value > cutoff:
+                        neighbordict[name1].add(name2)
+                        neighbordict[name2].add(name1)
+                else:
+                    if value < cutoff:
+                        neighbordict[name1].add(name2)
+                        neighbordict[name2].add(name1)
 
     return neighbordict
 
@@ -125,7 +125,7 @@ def remove_neighbors(neighbordict):
     # Build dictionary keeping track of how many neighbors each item has
     neighbor_count_dict = {}
     for name in neighbordict:
-        neighbor_count_dict[name]=len(neighbordict[name])
+        neighbor_count_dict[name] = len(neighbordict[name])
 
     # Find max number of neighbors and corresponding name
     item_with_most_nb, max_num_nb = max(neighbor_count_dict.items(), key=itemgetter(1))
@@ -176,5 +176,3 @@ def print_keepnames(keepnames):
 
 if __name__ == "__main__":
     main()
-    # import cProfile
-    # cProfile.run('main()', 'tmp/profile.pstats')
