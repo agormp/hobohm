@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import argparse, sys
+import argparse, sys, itertools
 from collections import defaultdict
 from operator import itemgetter
 
@@ -8,7 +8,10 @@ from operator import itemgetter
 def main():
     parser = build_parser()
     args = parse_commandline(parser)
-    neighbors = parse_neighbor_info(args)
+    if args.check:
+        neighbors = parse_neighbor_info_check(args)
+    else:
+        neighbors = parse_neighbor_info(args)
     if args.keepfile:
         neighbors = handle_keeplist(args, neighbors)
     neighbor_count = remove_neighbors(neighbors)
@@ -39,6 +42,11 @@ def build_parser():
 
     parser.add_argument("-k", action="store", dest="keepfile", metavar="KEEPFILE",
                           help="file with names of items that must be kept (one name per line)")
+    parser.add_argument('--check', action='store_true', dest="check",
+                              help="Check validity of input data: Are all pairs listed? "
+                                    + "Are A B distances the same as B A?  "
+                                    + "If yes: finish run and print results. "
+                                    + "If no: abort run with error message")
 
     return parser
 
@@ -80,6 +88,54 @@ def parse_neighbor_info(args):
                     if value < cutoff:
                         neighbors[name1].add(name2)
                         neighbors[name2].add(name1)
+
+    return neighbors
+
+################################################################################################
+
+def parse_neighbor_info_check(args):
+
+    # Note: duplicating code in this slower version to avoid boolean flags in other version
+    # Note 2: first attempt. Very inefficient memory-wise
+    neighbors = defaultdict(set)
+    names = set()
+    pairs = set()
+    distdict = {}
+
+    cutoff = args.cutoff    # Micro optimization: save time looking up dotted attributes
+    values_are_sim = args.values_are_sim
+
+    with open(args.pairfile, "r") as infile:
+
+        for line in infile:
+            name1,name2,value = line.split()
+            names.update([name1,name2])
+            pairs.update([(name1,name2), (name2,name1)])
+            distdict[(name1,name2)] = value
+
+            if name1 != name2:
+                value = float(value)
+
+                if values_are_sim:
+                    if value > cutoff:
+                        neighbors[name1].add(name2)
+                        neighbors[name2].add(name1)
+                else:
+                    if value < cutoff:
+                        neighbors[name1].add(name2)
+                        neighbors[name2].add(name1)
+
+    allpairs = set(itertools.permutations(names, 2))
+    if allpairs != pairs:
+        raise Exception("Some pairwise combinations were missing from input: {}".format(allpairs - pairs))
+    for name1,name2 in itertools.combinations(names,2):
+        if distdict[(name1,name2)] != distdict[(name2,name1)]:
+            if values_are_sim:
+                raise Exception("Discrepancy between pairwise similarities: s({},{})={}, but s({},{})={}".format(
+                                name1, name2, distdict[(name1,name2)], name2, name1, distdict[(name2,name1)]))
+            else:
+                raise Exception("Discrepancy between pairwise distances: d({},{})={}, but d({},{})={}".format(
+                                name1, name2, distdict[(name1,name2)], name2, name1, distdict[(name2,name1)]))
 
     return neighbors
 
