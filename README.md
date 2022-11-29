@@ -1,7 +1,7 @@
 # hobohm: command line program for selecting representative subset of data, based on list of pairwise similarities (or distances) between items.
 
 [![PyPI downloads](https://static.pepy.tech/personalized-badge/hobohm?period=total&units=international_system&left_color=grey&right_color=blue&left_text=downloads)](https://pepy.tech/project/hobohm)
-![](https://img.shields.io/badge/version-1.0.3-blue)
+![](https://img.shields.io/badge/version-1.1.0-blue)
 
 The `hobohm` program aims to select a representative subset from a collection of items for which the pairwise similarities are known.
 
@@ -37,7 +37,7 @@ python3 -m pip install --upgrade hobohm
 
 ## Dependencies
 
-There are no dependencies (apart from the python standard library).
+There are no dependencies.
 
 ## Overview
 
@@ -71,14 +71,22 @@ name1 name3 distance
 
 A list of names of items that should be kept in the representative subset, written to stdout. This set contains no pairs of items that are more similar (less distant) than the cutoff. The algorithm aims at making the set the maximal possible size. This can occassionally fail if there are multiple items with the same number of "neighbors" and the order of removal of items has an impact.
 
+### Checking validity of input data
+
+By default the program assumes that input data are valid, i.e., that there are entries for all pairs of names, and that listed values are consistent (A B value == B A value). Using the option `--check`, it is possible to explicitly check this. If an error is found, the program will stop with an error message. If data are OK, the program will finish  and print results.
+
+**Note:** Using this option requires storing all values in memory, and takes longer time to run.
+
 ### Performance:
 
 The program has been optimized to run reasonably fast with limited memory usage. For instance: 100 million lines of pairwise distance info (about 2.3 GB) was analyzed in 52 seconds, using about 1 GB of memory, on a 2018 Macbook Pro.
 
+**Note:** Using the option `--check` to verify validity of input data is costly in terms of memory and runtime.
+
 ## Usage
 
 ```
-usage: hobohm [-h] [-s | -d] [-c CUTOFF] [-k KEEPFILE] PAIRFILE
+usage: hobohm [-h] [-s | -d] [-c CUTOFF] [-k KEEPFILE] [--check] PAIRFILE
 
 Selects representative subset of data based on list of pairwise similarities (or
 distances), such that no retained items are close neighbors
@@ -87,12 +95,15 @@ positional arguments:
   PAIRFILE     file containing the similarity (option -s) or distance (option -d) for each
                pair of items: name1 name2 value
 
-optional arguments:
+options:
   -h, --help   show this help message and exit
   -s           values in PAIRFILE are similarities (larger values = more similar)
   -d           values in PAIRFILE are distances (smaller values = more similar)
   -c CUTOFF    cutoff for deciding which pairs are neighbors
   -k KEEPFILE  file with names of items that must be kept (one name per line)
+  --check      Check validity of input data: Are all pairs listed? Are A B distances the
+               same as B A? If yes: finish run and print results. If no: abort run with
+               error message
   ```
 
 ## Usage examples
