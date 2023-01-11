@@ -1,7 +1,7 @@
 # hobohm: command line program for selecting representative subset of data, based on list of pairwise similarities (or distances) between items.
 
 [![PyPI downloads](https://static.pepy.tech/personalized-badge/hobohm?period=total&units=international_system&left_color=grey&right_color=blue&left_text=downloads)](https://pepy.tech/project/hobohm)
-![](https://img.shields.io/badge/version-2.0.0-blue)
+![](https://img.shields.io/badge/version-2.0.1-blue)
 
 ---------------------------------------------------------------- 
 
