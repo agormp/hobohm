@@ -5,7 +5,7 @@
 
 ---------------------------------------------------------------- 
 
-**Note:** The [greedysub program](https://github.com/agormp/greedysub) implements a better algorithm (typically giving larger subsets). The `hobohm` program works, but is no longer maintained. Also see notes on computational intractibility of problem and performance of heuristics in the [greedysub README](https://github.com/agormp/greedysub).
+**Note:** The [greedysub program](https://github.com/agormp/greedysub) implements a better algorithm (typically giving larger subsets), and should be used instead. The `hobohm` program works, but is no longer maintained. Also see notes on computational intractibility of problem and performance of heuristics in the [greedysub README](https://github.com/agormp/greedysub).
 
 ----------------------------------------------------------------
 
