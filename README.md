@@ -12,7 +12,7 @@
 The `hobohm` program aims to select non-redundant subset of DNA or protein-sequences, such that all pairwise sequence identities
 are below  a given threshold.
 
-The program takes as input (1) a text-file containing a list of pairwise similarities (or distances) between sequences in a data set, and (2) a cutoff for deciding when two sequences are too similar (i.e., when they are "neighbors").
+The program takes as input (1) a text-file containing a list of pairwise similarities (or distances) between sequences (`name1 name2 similarity`), and (2) a cutoff for deciding when two sequences are too similar (i.e., when they are "neighbors").
 
 The output (written to file) is a list of names that should be kept in the subset. No retained items are neighbors, and the algorithm aims to pick the maximally sized such set, given the cutoff. (Note that this is a hard problem, and this heuristic is not optimal. See )
 
