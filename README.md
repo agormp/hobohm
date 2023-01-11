@@ -1,11 +1,11 @@
-# hobohm: command line program for selecting representative subset of data, based on list of pairwise similarities (or distances) between items.
+# [DEPRECATED] hobohm
 
 [![PyPI downloads](https://static.pepy.tech/personalized-badge/hobohm?period=total&units=international_system&left_color=grey&right_color=blue&left_text=downloads)](https://pepy.tech/project/hobohm)
-![](https://img.shields.io/badge/version-2.0.1-blue)
+![](https://img.shields.io/badge/version-2.0.2-blue)
 
 ---------------------------------------------------------------- 
 
-**Note:** The [greedysub program](https://github.com/agormp/greedysub) implements a better algorithm (typically giving larger subsets), and should be used instead. The `hobohm` program works, but is no longer maintained).
+**[DEPRECATED] Note:** `hobohm` has been merged into [greedysub](https://github.com/agormp/greedysub) which should be used instead. `greedysub` implements a better algorithm (typically giving larger subsets).
 
 ----------------------------------------------------------------
 
