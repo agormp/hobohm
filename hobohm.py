@@ -1,232 +1,245 @@
 #!/usr/bin/env python3
+
+# Subset of functionality of greedysub, which is better (and actively maintained),
+# so use that instead...
+
 import argparse, sys, itertools
+import pandas as pd
 from collections import defaultdict
 from operator import itemgetter
+from pathlib import Path
 
 ################################################################################################
 
-def main():
+# Python note: "commandlist" is to enable unit testing of argparse code
+# https://jugmac00.github.io/blog/testing-argparse-applications-the-better-way/
+
+def main(commandlist=None):
+    args = parse_commandline(commandlist)
+    graph = NeighborGraph(args)
+
+    # If input has no neighbors: do nothing, print results. Otherwise: proceed
+    if graph.origdata["max_degree"] > 0:
+        if args.keepfile:
+            graph.remove_keepfile_neighbors()
+        graph.reduce_from_top()
+    graph.write_results(args)
+
+################################################################################################
+
+# Python note: "commandlist" is to enable unit testing of argparse code
+# Will be "None" when run in script mode, and argparse will then automatically take values from sys.argv[1:]
+
+def parse_commandline(commandlist):
     parser = build_parser()
-    args = parse_commandline(parser)
-    if args.check:
-        neighbors = parse_neighbor_info_check(args)
-    else:
-        neighbors = parse_neighbor_info(args)
-    if args.keepfile:
-        neighbors = handle_keeplist(args, neighbors)
-    neighbor_count = remove_neighbors(neighbors)
-    keepnames = reinstate_neighborless_skipped(neighbors, neighbor_count)
-    print_keepnames(keepnames)
+    args = parser.parse_args(commandlist)
+    if args.valuetype is None:
+        parser.error("Must specify whether values in INFILE are distances (--val dist) or similarities (--val sim)")
+    if args.cutoff is None:
+        parser.error("Must provide cutoff (option -c)")
+    return args
 
 ################################################################################################
+
 
 def build_parser():
-    parser = argparse.ArgumentParser(description = "Selects representative subset of data based on" +
-                                    " list of pairwise similarities (or distances), such that no" +
-                                    " retained items are close neighbors")
 
-    parser.add_argument("pairfile", metavar='PAIRFILE', default="-",
-                        help="file containing the similarity (option -s) or distance " +
-                             "(option -d) for each pair of items: name1 name2 value")
+    parser = argparse.ArgumentParser(description = "Select non-redundant subset of DNA or protein-sequences, "
+                                         + "such that all pairwise sequence identities are below threshold.")
 
-    distsimgroup = parser.add_mutually_exclusive_group()
-    distsimgroup.add_argument('-s', action='store_true', dest="values_are_sim",
-                              help="values in PAIRFILE are similarities " +
-                                    "(larger values = more similar)")
-    distsimgroup.add_argument('-d', action='store_true', dest="values_are_dist",
-                              help="values in PAIRFILE are distances " +
-                                    "(smaller values = more similar)")
+    parser.add_argument("infile", metavar='INFILE', type=Path,
+                        help="input file containing similarity or distance " +
+                             "for each pair of items: name1 name2 value")
+
+    parser.add_argument("outfile", metavar='OUTFILE', type=Path,
+                        help="output file contatining neighborless subset of items (one name per line)")
+
+    #########################################################################################
+
+    parser.add_argument("--val", action='store', dest="valuetype", metavar="VALUETYPE",
+                      choices=["dist", "sim"],
+                      help="specify whether values in INFILE are distances (--val dist) or similarities (--val sim)")
 
     parser.add_argument("-c",  action="store", type=float, dest="cutoff", metavar="CUTOFF",
-                          help="cutoff for deciding which pairs are neighbors")
+                          help="cutoff value for deciding which pairs are neighbors")
 
-    parser.add_argument("-k", action="store", dest="keepfile", metavar="KEEPFILE",
-                          help="file with names of items that must be kept (one name per line)")
-    parser.add_argument('--check', action='store_true', dest="check",
-                              help="Check validity of input data: Are all pairs listed? "
-                                    + "Are A B distances the same as B A?  "
-                                    + "If yes: finish run and print results. "
-                                    + "If no: abort run with error message")
+    parser.add_argument("-k", action="store", dest="keepfile", metavar="KEEPFILE", type=Path,
+                          help="(optional) file with names of items that must be kept (one name per line)")
 
     return parser
 
 ################################################################################################
-
-def parse_commandline(parser):
-
-    args = parser.parse_args()
-    if ((args.values_are_sim and args.values_are_dist) or
-       ((not args.values_are_sim ) and (not args.values_are_dist))):
-        parser.error("Must specify either option -s (similarity) or option -d (distance)")
-    if args.cutoff is None:
-        parser.error("Must provide cutoff (option -c)")
-    return(args)
-
 ################################################################################################
 
-def parse_neighbor_info(args):
+class NeighborGraph:
+    """Stores information about nodes and their connections.
+    Methods for interrogating and changing graph"""
 
-    # neighbors should, for each item, contain a set of its neighbors (possibly empty)
-    neighbors = defaultdict(set)
 
-    cutoff = args.cutoff    # Micro optimization: save time looking up dotted attributes
-    values_are_sim = args.values_are_sim
+    def __init__(self, args):
 
-    with open(args.pairfile, "r") as infile:
+        # self.neighbors: dict(node:set(node's neighbors))
+        # self.neighbor_count: dict(node:count of node's neighbors)
+        # Note: only nodes WITH neighbors are keys in these two dicts
+        # Note 2: these dicts are changed by algorithm during iteration
 
-        for line in infile:
-            name1,name2,value = line.split()
+        # self.nodes: set(all nodes)
+        # self.origdata["orignum"]: number of nodes in graph before reducing
+        # self.origdata["average_degree"]: average no. connections to a node before reducing
+        # self.origdata["max/min_degree"]: max/min no. connections to a node before reducing
+        # self.origdata["average_dist"]: average distance between pairs of nodes before reducing
+        nreadlines = 1000000
+        nodes = set()
+        neighbors = defaultdict(set)
+        valuesum = 0
+        reader = pd.read_csv(args.infile, engine="c", delim_whitespace=True, chunksize=nreadlines,
+                             names=["name1", "name2", "val"], dtype={"name1":str, "name2":str, "val":float})
 
-            if name1 != name2:
-                value = float(value)
+        for df in reader:
+            nodes.update(df["name1"].values)
+            nodes.update(df["name2"].values)
+            valuesum += df["val"].values.sum()
 
-                if values_are_sim:
-                    if value > cutoff:
-                        neighbors[name1].add(name2)
-                        neighbors[name2].add(name1)
-                else:
-                    if value < cutoff:
-                        neighbors[name1].add(name2)
-                        neighbors[name2].add(name1)
-
-    return neighbors
-
-################################################################################################
-
-def parse_neighbor_info_check(args):
-
-    # Note: duplicating code in this slower version to avoid boolean flags in other version
-    # Note 2: first attempt. Very inefficient memory-wise
-    neighbors = defaultdict(set)
-    names = set()
-    pairs = set()
-    distdict = {}
-
-    cutoff = args.cutoff    # Micro optimization: save time looking up dotted attributes
-    values_are_sim = args.values_are_sim
-
-    with open(args.pairfile, "r") as infile:
-
-        for line in infile:
-            name1,name2,value = line.split()
-            names.update([name1,name2])
-            pairs.update([(name1,name2), (name2,name1)])
-            distdict[(name1,name2)] = value
-
-            if name1 != name2:
-                value = float(value)
-
-                if values_are_sim:
-                    if value > cutoff:
-                        neighbors[name1].add(name2)
-                        neighbors[name2].add(name1)
-                else:
-                    if value < cutoff:
-                        neighbors[name1].add(name2)
-                        neighbors[name2].add(name1)
-
-    allpairs = set(itertools.permutations(names, 2))
-    if allpairs != pairs:
-        raise Exception("Some pairwise combinations were missing from input: {}".format(allpairs - pairs))
-    for name1,name2 in itertools.combinations(names,2):
-        if distdict[(name1,name2)] != distdict[(name2,name1)]:
-            if values_are_sim:
-                raise Exception("Discrepancy between pairwise similarities: s({},{})={}, but s({},{})={}".format(
-                                name1, name2, distdict[(name1,name2)], name2, name1, distdict[(name2,name1)]))
+            if args.valuetype == "sim":
+                df = df.loc[df["val"].values > args.cutoff]
             else:
-                raise Exception("Discrepancy between pairwise distances: d({},{})={}, but d({},{})={}".format(
-                                name1, name2, distdict[(name1,name2)], name2, name1, distdict[(name2,name1)]))
+                df = df.loc[df["val"].values < args.cutoff]
+            df = df.loc[df["name1"].values != df["name2"].values]
+            for name1, name2 in zip(df["name1"].values, df["name2"].values):
+                neighbors[name1].add(name2)
+                neighbors[name2].add(name1)
 
-    return neighbors
+        # Convert to regular dict (not defaultdict) to avoid gotchas with key generation on access
+        # Python note: would it be faster to just use dict.setdefault() during creation?
+        self.neighbors = dict(neighbors)
+        self.nodes = nodes
+        self.neighbor_count = {}
+        degreelist = []
+        for name in self.neighbors:
+            degree = len(self.neighbors[name])
+            self.neighbor_count[name] = degree
+            degreelist.append(degree)
+        self.origdata = {}
+        self.origdata["orignum"] = len(self.nodes)
+        self.origdata["average_degree"] =  sum(degreelist) / self.origdata["orignum"]
+        self.origdata["max_degree"] =  max(degreelist, default=0)
+        self.origdata["min_degree"] =  min(degreelist, default=0)
+        n = self.origdata["orignum"]
+        self.origdata["average_dist"] = valuesum * 2 / (n * (n - 1))
 
-################################################################################################
+        self.keepset = set()
+        if args.keepfile:
+            with open(args.keepfile, "r") as keepfile:
+                for line in keepfile:
+                    node = line.strip()
+                    self.keepset.add(node)
+        #self.df = df
 
-def handle_keeplist(args, neighbors):
+    ############################################################################################
 
-    # Read list of names to keep
-    keepset = set()
-    with open(args.keepfile, "r") as infile:
-        for line in infile:
-            word = line.rstrip()
-            if word:                    # Maybe overkill to allow blank lines...
-                keepset.add(word)
+    def most_neighbors(self):
+        """Returns tuple: (node_with_most_nb, max_num_nb)"""
 
-    # First, check if any pair of keepset members are neighbors.
-    # If so, print warning on stderr and artificially hide this fact
-    for keepname1 in keepset:
-        for keepname2 in (keepset - set([keepname1])):
-            if keepname2 in neighbors[keepname1]:
-                sys.stderr.write("# Keeplist warning: {} and {} are neighbors!".format(keepname1, keepname2))
-                neighbors[keepname1].remove(keepname2)
-                neighbors[keepname2].remove(keepname1)
+        node_with_most_nb, max_num_nb = max(self.neighbor_count.items(), key=itemgetter(1), default=(None,0))
+        return (node_with_most_nb, max_num_nb)
 
-    # Then, remove all neighbors of keepset members
-    for keepname in keepset:
-        keepname_neighbors = list(neighbors[keepname]) # To avoid issues with changing set during iteration
+    ############################################################################################
 
-        for remseq in keepname_neighbors:
-            # Remove any mention of remseq in other entries
-            remseq_neighbors = list(neighbors[remseq])
-            for remseq_neighbor in remseq_neighbors:
-                neighbors[remseq_neighbor].remove(remseq)
+    def remove_node(self, nodename):
+        """Removes node from graph"""
 
-            # Now remove remseq entry itself
-            del neighbors[remseq]
+        if nodename in self.neighbors:
+            del self.neighbor_count[nodename]
+            for nb in self.neighbors[nodename]:
+                self.neighbor_count[nb] -= 1
+                if self.neighbor_count[nb] == 0:
+                    del self.neighbor_count[nb]
+                    del self.neighbors[nb]
+                else:
+                    self.neighbors[nb].remove(nodename)
+            del self.neighbors[nodename]
+        self.nodes.remove(nodename)
 
-    return(neighbors)
+    ############################################################################################
 
-################################################################################################
+    def remove_connection(self, node1, node2):
+        """Removes the edge from node1 to node2 in graph"""
 
-def remove_neighbors(neighbors):
+        try:
+            self.neighbors[node1].remove(node2)
+            self.neighbors[node2].remove(node1)
+            self.neighbor_count[node1] -= 1
+            if self.neighbor_count[node1] == 0:
+                del self.neighbor_count[node1]
+                del self.neighbors[node1]
+            self.neighbor_count[node2] -= 1
+            if self.neighbor_count[node2] == 0:
+                del self.neighbor_count[node2]
+                del self.neighbors[node2]
+        except Exception:
+            raise Exception(f"These nodes are not neighbors: {node1}, {node2}. Can't remove connection")
 
-    # Build dictionary keeping track of how many neighbors each item has
-    neighbor_count = {}
-    for name in neighbors:
-        neighbor_count[name] = len(neighbors[name])
+    ############################################################################################
 
-    # Find max number of neighbors and corresponding name
-    item_with_most_nb, max_num_nb = max(neighbor_count.items(), key=itemgetter(1))
+    def remove_neighbors(self, nodename):
+        """Removes neighbors of nodename from graph, if there are any"""
 
-    # While some items still have neighbors: remove an item with most neighbors, update counts
-    # Note: could ties be dealt with intelligently?
-    while max_num_nb > 0:
+        if nodename in self.neighbors:
+            for nb in self.neighbors[nodename].copy():
+                self.remove_node(nb)
 
-        del(neighbor_count[item_with_most_nb])
+    ############################################################################################
 
-        # Update neighbor counts
-        for item in neighbors[item_with_most_nb]:
-            if item in neighbor_count:
-                neighbor_count[item] -= 1
+    def remove_keepfile_neighbors(self):
+        """Remove neighbors of nodes in keepfile.
+        If any nodes in keepfile are neighbors: disconnect, and print notification to stdout"""
 
-        # Find new maximum number of neighbors
-        item_with_most_nb, max_num_nb = max(neighbor_count.items(), key=itemgetter(1))
+        # First, check if any pair of keepset members are neighbors.
+        # If so, print warning on stderr and hide this fact by removing connection in graph
+        for n1, n2 in itertools.combinations(self.keepset, 2):
+            if (n1 in self.neighbors) and (n2 in self.neighbors[n1]):
+                sys.stderr.write("# Keeplist warning: {} and {} are neighbors!\n".format(n1, n2))
+                self.remove_connection(n1, n2)
 
-    return neighbor_count
+        # Then, remove all neighbors of keepset members
+        for keepname in self.keepset:
+            self.remove_neighbors(keepname)
 
-################################################################################################
+    ############################################################################################
 
-def reinstate_neighborless_skipped(neighbors, neighbor_count):
+    def reduce_from_top(self):
+        """Iteratively remove most connected node, until no neighbors left in graph"""
 
-    # Postprocess: reinstate skipped sequences that now have no neighbors
-    # (This can happpen when ...?)
-    # Note: order may have effect. Could this be optimized?
+        node_with_most_nb, max_num_nb = self.most_neighbors()
+        while max_num_nb > 0:
+            self.remove_node(node_with_most_nb)
+            node_with_most_nb, max_num_nb = self.most_neighbors()
 
-    allseqs=set(neighbors.keys())
-    keepseqs=set(neighbor_count.keys())
-    skipseqs=allseqs - keepseqs
+    ############################################################################################
 
-    for skipped in skipseqs:
-        # if skipped sequence has no neighbors in keeplist
-        if not (neighbors[skipped] & keepseqs):
-            keepseqs.add(skipped)
+    def write_results(self, args):
+        """Write results to outfile, and extra info to stdout"""
 
-    return keepseqs
+        print(f"\n\tNames in reduced set written to {args.outfile}\n")
 
-################################################################################################
+        print(f"\tNumber in original set: {self.origdata['orignum']:>10,}")
+        print(f"\tNumber in reduced set: {len(self.nodes):>11,}\n")
 
-def print_keepnames(keepnames):
-    for name in keepnames:
-        print(name)
+        print("\tNode degree original set:")
+        print(f"\t    min: {self.origdata['min_degree']:>7,}")
+        print(f"\t    max: {self.origdata['max_degree']:>7,}")
+        print(f"\t    ave: {self.origdata['average_degree']:>10,.2f}\n")
+
+        if args.valuetype == "sim":
+            print("\tNode similarities original set:")
+        else:
+            print("\tNode distances original set:")
+        print(f"\t    ave: {self.origdata['average_dist']:>10,.2f}")
+        print(f"\t    cutoff: {args.cutoff:>7,.2f}\n")
+
+        with open(args.outfile, "w") as outfile:
+            for name in self.nodes:
+                outfile.write("{}\n".format(name))
 
 ################################################################################################
 
