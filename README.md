@@ -5,16 +5,16 @@
 
 ---------------------------------------------------------------- 
 
-**Note:** The [greedysub program](https://github.com/agormp/greedysub) implements a better algorithm (typically giving larger subsets), and should be used instead. The `hobohm` program works, but is no longer maintained. Also see notes on computational intractibility of problem and performance of heuristics in the [greedysub README](https://github.com/agormp/greedysub).
+**Note:** The [greedysub program](https://github.com/agormp/greedysub) implements a better algorithm (typically giving larger subsets), and should be used instead. The `hobohm` program works, but is no longer maintained).
 
 ----------------------------------------------------------------
 
-The `hobohm` program aims to select non-redundant subset of DNA or protein-sequences, such that all pairwise sequence identities
-are below  a given threshold.
+The `hobohm` program aims to select a non-redundant subset of DNA- or protein-sequences, such that all pairwise sequence identities
+are below a given threshold.
 
-The program takes as input (1) a text-file containing a list of pairwise similarities (or distances) between sequences (`name1 name2 similarity`), and (2) a cutoff for deciding when two sequences are too similar (i.e., when they are "neighbors").
+The program takes as input (1) a text-file containing a list of pairwise similarities between sequences (`name1 name2 similarity`), and (2) a cutoff for deciding when two sequences are too similar (i.e., when they are "neighbors").
 
-The output (written to file) is a list of names that should be kept in the subset. No retained items are neighbors, and the algorithm aims to pick the maximally sized such set, given the cutoff. (Note that this is a hard problem, and this heuristic is not optimal. See )
+The output (written to file) is a list of names that should be kept in the subset. No retained items are neighbors, and the algorithm aims to pick the maximally sized such set, given the cutoff. (Note that this is a hard problem, and this heuristic is not optimal. See  notes on computational intractibility of the problem and performance of heuristics in the [greedysub README](https://github.com/agormp/greedysub)).
 
 The "Hobohm" algorithm was originally created with the purpose of selecting homology-reduced sets of protein data from larger datasets. "Homology-reduced" here means that the resulting data set should contain no pairs of sequences with high sequence identity:
 
