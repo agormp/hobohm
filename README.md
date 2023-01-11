@@ -48,18 +48,20 @@ python3 -m pip install --upgrade hobohm
 ```
 usage: hobohm [-h] [--val VALUETYPE] [-c CUTOFF] [-k KEEPFILE] INFILE OUTFILE
 
-Select non-redundant subset of DNA or protein-sequences, such that all pairwise sequence
-identities are below threshold.
+Select non-redundant subset of DNA or protein-sequences, such that all pairwise
+sequence identities are below threshold.
 
 positional arguments:
-  INFILE           input file containing similarity or distance for each pair of items: name1
-                   name2 value
-  OUTFILE          output file contatining neighborless subset of items (one name per line)
+  INFILE           input file containing similarity or distance for each pair of
+                   items: name1 name2 value
+  OUTFILE          output file contatining neighborless subset of items (one name per
+                   line)
 
 options:
   -h, --help       show this help message and exit
-  --val VALUETYPE  specify whether values in INFILE are distances (--val dist) or similarities
-                   (--val sim)
+  --val VALUETYPE  specify whether values in INFILE are distances (--val dist) or
+                   similarities (--val sim)
   -c CUTOFF        cutoff value for deciding which pairs are neighbors
-  -k KEEPFILE      (optional) file with names of items that must be kept (one name per line)
+  -k KEEPFILE      (optional) file with names of items that must be kept (one name per
+                   line)
 ```
